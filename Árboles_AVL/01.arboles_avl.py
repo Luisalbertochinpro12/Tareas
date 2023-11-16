@@ -1,210 +1,223 @@
-class Node:
-    def __init__(self, label):
-        self.label = label
-        self._parent = None
-        self._left = None
-        self._right = None
-        self.height = 0
-
-    @property
-    def right(self):
-        return self._right
-
-    @right.setter
-    def right(self, node):
-        if node is not None:
-            node._parent = self
-            self._right = node
-
-    @property
-    def left(self):
-        return self._left
-
-    @left.setter
-    def left(self, node):
-        if node is not None:
-            node._parent = self
-            self._left = node
-
-    @property
-    def parent(self):
-        return self._parent
-
-    @parent.setter
-    def parent(self, node):
-        if node is not None:
-            self._parent = node
-            self.height = self.parent.height + 1
-        else:
-            self.height = 0
-
+class Nodo:
+    def __init__(self, valor):
+        self.valor = valor
+        self.izquierda = None
+        self.derecha = None
+        self.altura = 1
 
 class AVL:
-
     def __init__(self):
-        self.root = None
-        self.size = 0
+        self.raiz = None
 
-    def insert(self, value):
-        node = Node(value)
+    def altura(self, nodo):
+        if nodo is None:
+            return 0
+        return nodo.altura
 
-        if self.root is None:
-            self.root = node
-            self.root.height = 0
-            self.size = 1
+    def actualizar_altura(self, nodo):
+        if nodo is not None:
+            nodo.altura = 1 + max(self.altura(nodo.izquierda), self.altura(nodo.derecha))
+
+    def rotar_derecha(self, y):
+        x = y.izquierda
+        T2 = x.derecha
+
+        x.derecha = y
+        y.izquierda = T2
+
+        self.actualizar_altura(y)
+        self.actualizar_altura(x)
+
+        return x
+
+    def rotar_izquierda(self, x):
+        y = x.derecha
+        T2 = y.izquierda
+
+        y.izquierda = x
+        x.derecha = T2
+
+        self.actualizar_altura(x)
+        self.actualizar_altura(y)
+
+        return y
+
+    def balance(self, nodo):
+        if nodo is None:
+            return 0
+        return self.altura(nodo.izquierda) - self.altura(nodo.derecha)
+
+    def insertar(self, valor):
+        if not self.raiz:
+            self.raiz = Nodo(valor)
         else:
-            dad_node = None
-            curr_node = self.root
+            self.raiz = self._insertar(valor, self.raiz)
 
-            while True:
-                if curr_node is not None:
+    def _insertar(self, valor, nodo):
+        if not nodo:
+            return Nodo(valor)
 
-                    dad_node = curr_node
+        if valor <= nodo.valor:
+            nodo.izquierda = self._insertar(valor, nodo.izquierda)
+        else:
+            nodo.derecha = self._insertar(valor, nodo.derecha)
 
-                    if node.label < curr_node.label:
-                        curr_node = curr_node.left
-                    else:
-                        curr_node = curr_node.right
-                else:
-                    node.height = dad_node.height
-                    dad_node.height += 1
-                    if node.label < dad_node.label:
-                        dad_node.left = node
-                    else:
-                        dad_node.right = node
-                    self.rebalance(node)
-                    self.size += 1
-                    break
+        self.actualizar_altura(nodo)
 
-    # Operación de rotación
-    def rebalance(self, node):
-        n = node
+        balance = self.balance(nodo)
 
-        while n is not None:
-            height_right = n.height
-            height_left = n.height
+        # Caso de desequilibrio izquierda-izquierda
+        if balance > 1 and valor <= nodo.izquierda.valor:
+            return self.rotar_derecha(nodo)
 
-            if n.right is not None:
-                height_right = n.right.height
+        # Caso de desequilibrio derecha-derecha
+        if balance < -1 and valor > nodo.derecha.valor:
+            return self.rotar_izquierda(nodo)
 
-            if n.left is not None:
-                height_left = n.left.height
+        # Caso de desequilibrio izquierda-derecha
+        if balance > 1 and valor > nodo.izquierda.valor:
+            nodo.izquierda = self.rotar_izquierda(nodo.izquierda)
+            return self.rotar_derecha(nodo)
 
-            if abs(height_left - height_right) > 1:
-                if height_left > height_right:
-                    left_child = n.left
-                    if left_child is not None:
-                        h_right = (left_child.right.height
-                                   if (left_child.right is not None) else 0)
-                        h_left = (left_child.left.height
-                                  if (left_child.left is not None) else 0)
-                    if (h_left > h_right):
-                        self.rotate_left(n)
-                        break
-                    else:
-                        self.double_rotate_right(n)
-                        break
-                else:
-                    right_child = n.right
-                    if right_child is not None:
-                        h_right = (right_child.right.height
-                                   if (right_child.right is not None) else 0)
-                        h_left = (right_child.left.height
-                                  if (right_child.left is not None) else 0)
-                    if (h_left > h_right):
-                        self.double_rotate_left(n)
-                        break
-                    else:
-                        self.rotate_right(n)
-                        break
-            n = n.parent
+        # Caso de desequilibrio derecha-izquierda
+        if balance < -1 and valor <= nodo.derecha.valor:
+            nodo.derecha = self.rotar_derecha(nodo.derecha)
+            return self.rotar_izquierda(nodo)
 
-    def rotate_left(self, node):
-        aux = node.parent.label
-        node.parent.label = node.label
-        node.parent.right = Node(aux)
-        node.parent.right.height = node.parent.height + 1
-        node.parent.left = node.right
+        return nodo
 
-    def rotate_right(self, node):
-        aux = node.parent.label
-        node.parent.label = node.label
-        node.parent.left = Node(aux)
-        node.parent.left.height = node.parent.height + 1
-        node.parent.right = node.right
+    def buscar(self, valor):
+        if self.raiz:
+            return self._buscar(valor, self.raiz)
+        else:
+            return False
 
-    def double_rotate_left(self, node):
-        self.rotate_right(node.getRight().getRight())
-        self.rotate_left(node)
+    def _buscar(self, valor, nodo):
+        if not nodo:
+            return False
 
-    def double_rotate_right(self, node):
-        self.rotate_left(node.getLeft().getLeft())
-        self.rotate_right(node)
-
-    def empty(self):
-        if self.root is None:
+        if valor == nodo.valor:
             return True
-        return False
+        elif valor < nodo.valor:
+            return self._buscar(valor, nodo.izquierda)
+        else:
+            return self._buscar(valor, nodo.derecha)
 
-    def in_order(self, curr_node):
-        if curr_node is not None:
-            self.in_order(curr_node.left)
-            print(curr_node.label, end=" ")
-            self.in_order(curr_node.right)
+    def eliminar(self, valor):
+        if self.raiz:
+            self.raiz = self._eliminar(valor, self.raiz)
 
-    def pre_order(self, curr_node):
-        if curr_node is not None:
-            print(curr_node.label, end=" ")
-            self.in_order(curr_node.left)
-            self.in_order(curr_node.right)
+    def _eliminar(self, valor, nodo):
+        if not nodo:
+            return nodo
 
-    def pos_order(self, curr_node):
-        if curr_node is not None:
-            self.in_order(curr_node.left)
-            self.in_order(curr_node.right)
-            print(curr_node.label, end=" ")
+        if valor < nodo.valor:
+            nodo.izquierda = self._eliminar(valor, nodo.izquierda)
+        elif valor > nodo.valor:
+            nodo.derecha = self._eliminar(valor, nodo.derecha)
+        else:
+            # Nodo con un solo hijo o sin hijos
+            if not nodo.izquierda:
+                temp = nodo.derecha
+                nodo = None
+                return temp
+            elif not nodo.derecha:
+                temp = nodo.izquierda
+                nodo = None
+                return temp
 
-    def get_root(self):
-        return self.root
+            # Nodo con dos hijos, obtener el sucesor inorden (el más pequeño
+            # en el subárbol derecho)
+            temp = self._nodo_minimo(nodo.derecha)
+            nodo.valor = temp.valor
+            nodo.derecha = self._eliminar(temp.valor, nodo.derecha)
 
+        if not nodo:
+            return nodo
 
+        self.actualizar_altura(nodo)
+
+        balance = self.balance(nodo)
+
+        # Caso de desequilibrio izquierda-izquierda
+        if balance > 1 and self.balance(nodo.izquierda) >= 0:
+            return self.rotar_derecha(nodo)
+
+        # Caso de desequilibrio izquierda-derecha
+        if balance > 1 and self.balance(nodo.izquierda) < 0:
+            nodo.izquierda = self.rotar_izquierda(nodo.izquierda)
+            return self.rotar_derecha(nodo)
+
+        # Caso de desequilibrio derecha-derecha
+        if balance < -1 and self.balance(nodo.derecha) <= 0:
+            return self.rotar_izquierda(nodo)
+
+        # Caso de desequilibrio derecha-izquierda
+        if balance < -1 and self.balance(nodo.derecha) > 0:
+            nodo.derecha = self.rotar_derecha(nodo.derecha)
+            return self.rotar_izquierda(nodo)
+
+        return nodo
+
+    def _nodo_minimo(self, nodo):
+        while nodo.izquierda is not None:
+            nodo = nodo.izquierda
+        return nodo
+
+    def imprimir_en_orden(self, nodo):
+        if nodo:
+            self.imprimir_en_orden(nodo.izquierda)
+            print(nodo.valor, end=" ")
+            self.imprimir_en_orden(nodo.derecha)
+
+    def esta_vacio(self):
+        return self.raiz is None
+
+# Menú interactivo
 if __name__ == "__main__":
+    arbol_avl = AVL()
 
-    def menu():
-        opc = 0
-        arbol_avl = AVL()
-        try:
-            while opc != 7:
-                print("\nÁrbol AVL\n"
-                      + "\n\t1. Agregar Nodos"
-                      + "\n\t2. ¿Esta vacío el árbol?"
-                      + "\n\t3. Recorrer en orden"
-                      + "\n\t4. Recorrer en post-orden"
-                      + "\n\t5. Recorrer en pre-orden"
-                      + "\n\t6. Obtener raiz"
-                      + "\n\t7. Salir")
+    while True:
+        print("\nMenú:")
+        print("1. Agregar nodo")
+        print("2. Eliminar nodo")
+        print("3. Imprimir en orden")
+        print("4. ¿Está vacío el árbol?")
+        print("5. Buscar nodo específico")
+        print("6. Salir")
 
-                opc = int(input("Ingrese su opción "))
+        opcion = input("Ingrese el número de la opción deseada: ")
 
-                if opc == 1:
-                    dato = int(input("Ingrese el dato a anexar al arbol "))
-                    arbol_avl.insert(dato)
-                elif opc == 2:
-                    print("SI" if arbol_avl.empty() else "NO")
-                elif opc == 3:
-                    arbol_avl.in_order(arbol_avl.root)
-                elif opc == 4:
-                    arbol_avl.pos_order(arbol_avl.root)
-                elif opc == 5:
-                    arbol_avl.pre_order(arbol_avl.root)
-                elif opc == 6:
-                    print(arbol_avl.get_root().label)
-                elif opc == 7:
-                    print("Adios")
-                else:
-                    print("Ingresaste una opción errónea")
-        except Exception as e:
-            print("\n Solo se permiten caracteres numéricos")
-            print(e)
+        if opcion == "1":
+            valor = int(input("Ingrese el valor del nodo a agregar: "))
+            arbol_avl.insertar(valor)
+            print(f"Nodo con valor {valor} agregado correctamente.")
 
-    menu()
+        elif opcion == "2":
+            valor = int(input("Ingrese el valor del nodo a eliminar: "))
+            arbol_avl.eliminar(valor)
+            print(f"Nodo con valor {valor} eliminado correctamente.")
+
+        elif opcion == "3":
+            print("Árbol AVL en orden:")
+            arbol_avl.imprimir_en_orden(arbol_avl.raiz)
+
+        elif opcion == "4":
+            if arbol_avl.esta_vacio():
+                print("El árbol está vacío.")
+            else:
+                print("El árbol no está vacío.")
+
+        elif opcion == "5":
+            valor = int(input("Ingrese el valor del nodo a buscar: "))
+            if arbol_avl.buscar(valor):
+                print(f"El nodo con valor {valor} está en el árbol.")
+            else:
+                print(f"El nodo con valor {valor} no está en el árbol.")
+
+        elif opcion == "6":
+            print("Saliendo del programa. ¡Hasta luego!")
+            break
+
+        else:
+            print("Opción no válida. Por favor, ingrese un número del 1 al 6.")
